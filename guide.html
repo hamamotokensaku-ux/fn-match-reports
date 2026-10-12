@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>試合レポートの使い方</title>
+<style>
+  :root { --bg: #11151c; --panel: #1a2029; --line: #2c3542; --text: #e6e9ee; --muted: #9aa4b2; --accent: #5aa9ff;
+          --deal: #3ddc84; --take: #ff5c5c; --kill: #ffd447; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.75 "Yu Gothic UI", "Meiryo", system-ui, sans-serif; }
+  main { max-width: 880px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  h2 { font-size: 18px; margin: 36px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+  h3 { font-size: 15px; margin: 20px 0 6px; }
+  p, li { margin: 0 0 8px; }
+  .lead { color: var(--muted); }
+  a { color: var(--accent); }
+  img { width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; margin: 8px 0 4px; }
+  .cap { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+  .num { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%;
+         background: #ffd447; color: #000; font: bold 13px Arial, sans-serif; margin-right: 6px; vertical-align: 1px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; margin: 6px 0 12px; }
+  th, td { border-bottom: 1px solid var(--line); padding: 6px 8px; text-align: left; vertical-align: top; }
+  th { color: var(--muted); font-weight: normal; white-space: nowrap; }
+  .box { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin: 10px 0; }
+  .g { color: var(--deal); } .r { color: var(--take); } .y { color: var(--kill); }
+  .warm { background: linear-gradient(90deg, #ffe25c, #ff9628, #d62828); }
+  .cold { background: linear-gradient(90deg, #5aa0ff, #50dcf0, #149682); }
+  .bar { display: inline-block; width: 64px; height: 8px; border-radius: 4px; vertical-align: middle; margin: 0 4px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>試合レポートの使い方</h1>
+  <p class="lead">大会のリプレイから、1試合の全選手の「動き・撃ち合い・ストーム」をまとめたページです。<a href="./">試合レポート一覧へ戻る</a></p>
+
+  <div class="box">
+    <b>はじめに</b>
+    <ul>
+      <li><b>PC のブラウザで開いてください。</b>マップの印にマウスを乗せる操作と、ドラッグでの地図の移動は、スマホでは使えません。</li>
+      <li>レポートには、その試合の<b>全選手</b>のデータが入っています。自分以外の選手（上位の選手など）も見られます。</li>
+    </ul>
+  </div>
+
+  <h2>画面の全体</h2>
+  <img src="guide-screenshot.jpg" alt="試合レポートの画面。番号1〜10で各部分を示している">
+  <p class="cap">上が試合全体の評価表、下が選んだ選手の詳細です。番号は下の説明と対応しています。</p>
+
+  <h2><span class="num">1</span>全体の評価表</h2>
+  <p>試合に出た全選手が1行ずつ並んでいます。<b>列の見出しをクリック</b>すると並べ替え（もう一度で逆順）、<b>行をクリック</b>するとその選手の詳細が下に出ます。</p>
+  <table>
+    <tr><th>推定順位</th><td>倒された時刻が遅い順。<b>公式の順位ではありません</b>（リプレイから推定したもの）。</td></tr>
+    <tr><th>撃破時刻</th><td>倒されたリプレイ時刻。最後まで残った選手は「最後まで生存」。</td></tr>
+    <tr><th>生存時間</th><td>バスが出発してから倒されるまでの時間。</td></tr>
+    <tr><th>キル / 撃破した相手</th><td>倒した人数と、自分を倒した選手。「撃破者不明（ストーム等）」はストームなど、プレイヤー以外で倒れた場合です。</td></tr>
+    <tr><th>与ダメ / 被ダメ</th><td>プレイヤーに与えた・プレイヤーから受けたダメージの合計。<b>NPC・建築物へのダメージは含みません。</b></td></tr>
+    <tr><th>サージ</th><td>与ダメ − 被ダメ。プラスなら撃ち合いで得をしている、マイナスなら損をしている目安です。</td></tr>
+    <tr><th>ストームダメージ</th><td>ストームで受けたダメージ（推定値）。</td></tr>
+    <tr><th>ストーム滞在(秒)</th><td>ストームの中にいた時間の合計。</td></tr>
+  </table>
+
+  <h2>選手の詳細</h2>
+  <h3><span class="num">2</span>選手の選択</h3>
+  <p>ここからも選手を切り替えられます（評価表の行をクリックしても同じ）。</p>
+
+  <h3><span class="num">3</span>成績</h3>
+  <p>その選手の撃破時刻・生存時間・キル・与ダメ・被ダメ・サージ・ストームダメージなどです。</p>
+
+  <h3><span class="num">6</span>マップ</h3>
+  <ul>
+    <li><b>線</b>＝移動ルート。色で時間帯が分かります：安地の待機中<span class="bar warm"></span>暖色（黄→赤）、安地の収縮中<span class="bar cold"></span>寒色（青→緑）。後半のフェーズほど濃い色です。</li>
+    <li><b>円</b>＝安地。</li>
+    <li><span class="g">●</span> 与えたダメージの地点　<span class="r">●</span> 受けたダメージの地点　<span class="y">★</span> キル　✕ 倒された地点　◎ スライダーの時刻にいた位置</li>
+  </ul>
+
+  <h3><span class="num">8</span>印にマウスを乗せる</h3>
+  <p>●★✕ にマウスを乗せると、<b>時刻・相手・ダメージ量・その時点のサージ</b>が出ます。印が重なっているときは、まとめて時刻順に表示されます。</p>
+
+  <h3><span class="num">7</span>拡大・縮小</h3>
+  <p>マップ右上の <b>＋ / －</b> で拡大・縮小、<b>全体</b>で元に戻します。拡大中は<b>ドラッグ</b>で地図を動かせます。</p>
+
+  <h3><span class="num">4</span>表示する区間</h3>
+  <p>試合の一部だけを表示します。</p>
+  <ul>
+    <li><b>全体</b>：試合を通したルート。</li>
+    <li><b>バス〜降下</b>：バスから降りて、最初の安地が出るまで。</li>
+    <li><b>Phase n 待機</b>：n番目の安地が出てから、縮み始めるまで。</li>
+    <li><b>Phase n 収縮</b>：安地が縮んでいる間。このときは<b>次の安地も点線</b>で出るので、次にどこへ動くべきだったかも分かります。</li>
+  </ul>
+  <p>区間を選ぶと、その区間のルート・印・出来事だけが表示され、スライダーは区間の最初に移動します。</p>
+
+  <h3><span class="num">5</span>時間スライダー</h3>
+  <p>動かすと、その時刻にいた位置がマップに ◎ で出て、<b>その時点までの与ダメ・被ダメ・サージ</b>が下に表示されます。</p>
+
+  <h3><span class="num">9</span>出来事</h3>
+  <p>撃ち合い・キル・倒された・ストームに入った を時刻順に並べています。撃ち合いは、同じ相手との10秒以内のやり取りを1行にまとめています（例：「〜06:42 vs ○○　与ダメ 209 / 被ダメ 118.4」）。<b>行をクリック</b>すると、スライダーとマップがその時刻に移動します。</p>
+
+  <h3><span class="num">10</span>ストームの中にいた時間帯</h3>
+  <p>ストームに入った時刻・出た時刻・その間に受けたダメージです。</p>
+
+  <h2>振り返りに使うには</h2>
+  <ul>
+    <li><b>負けた撃ち合いを探す</b>：出来事で「被ダメ」が大きい行をクリック → マップでその場所と前後の動きを確認 → リプレイでその時刻を見る。</li>
+    <li><b>ストームの使い方を見直す</b>：ストームの表で長く入っていた時間帯を確認 → 「Phase n 収縮」を選んで、次の安地（点線）に対してどう動いていたかを見る。</li>
+    <li><b>上位の選手と比べる</b>：同じフェーズで上位の選手を選び、ルートや撃ち合いの場所を比べる。</li>
+  </ul>
+
+  <h2>数字についての注意</h2>
+  <ul>
+    <li>推定順位は倒された時刻からの推定で、公式の順位と違うことがあります。</li>
+    <li>与ダメ・被ダメはプレイヤー同士のダメージだけです（NPC・建築物・ストーム・落下は含みません）。ダウン中の相手への攻撃や死体撃ちは数えていません。</li>
+    <li>ストームダメージは「ストームにいた秒数 × その時のダメージ量」で計算した推定値です。</li>
+    <li>時刻はリプレイの再生時間です。リプレイで同じ時刻を開くと、その場面を確認できます。</li>
+    <li>フェーズの番号は1から数えています。</li>
+    <li>止まっている間（建築の中で籠っているときなど）は位置の記録が増えないので、ルートの線は途切れずにつながって見えます。</li>
+  </ul>
+
+  <p class="lead" style="margin-top:32px"><a href="./">← 試合レポート一覧へ戻る</a></p>
+</main>
+</body>
+</html>

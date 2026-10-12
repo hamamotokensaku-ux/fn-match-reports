@@ -268,7 +268,8 @@ function buildPlayer(id) {
   });
   const kills = DATA.kills.filter(k => k[1] === id).map(k => ({ t: k[0], victim: k[2], x: k[3], y: k[4] }));
   const death = DATA.kills.find(k => k[2] === id);
-  const storm = DATA.storm[id] || [];
+  // 境目をかすめただけ（1秒未満でダメージ0）の記録は一覧・表に出さない。合計値（stats）はそのまま
+  const storm = (DATA.storm[id] || []).filter(([a, b, d]) => b - a >= 1 || (d !== null && d > 0));
   const end = p.death === null ? DATA.meta.endT : p.death;
   return { p, path, hits, kills, death, storm, end };
 }
