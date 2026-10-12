@@ -27,10 +27,22 @@
   .warm { background: linear-gradient(90deg, #ffe25c, #ff9628, #d62828); }
   .cold { background: linear-gradient(90deg, #5aa0ff, #50dcf0, #149682); }
   .bar { display: inline-block; width: 64px; height: 8px; border-radius: 4px; vertical-align: middle; margin: 0 4px; }
+  main.top { padding-bottom: 0; }
+  main.rest { padding-top: 8px; }
+  /* 図（左）と番号の説明（右） */
+  .overview { max-width: 1400px; margin: 0 auto; padding: 0 16px; display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 20px; align-items: start; }
+  .overview figure { margin: 0; }
+  .overview img { margin: 0 0 4px; }
+  .legend { list-style: none; margin: 0; padding: 0; position: sticky; top: 12px; }
+  .legend li { display: flex; gap: 8px; align-items: flex-start; background: var(--panel); border: 1px solid var(--line);
+               border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; font-size: 13.5px; line-height: 1.6; }
+  .legend .num { flex: none; margin: 1px 0 0; }
+  .legend b { display: block; font-size: 14px; }
+  @media (max-width: 900px) { .overview { grid-template-columns: 1fr; } .legend { position: static; } }
 </style>
 </head>
 <body>
-<main>
+<main class="top">
   <h1>試合レポートの使い方</h1>
   <p class="lead">大会のリプレイから、1試合の全選手の「動き・撃ち合い・ストーム」をまとめたページです。<a href="./">試合レポート一覧へ戻る</a></p>
 
@@ -43,8 +55,27 @@
   </div>
 
   <h2>画面の全体</h2>
-  <img src="guide-screenshot.jpg" alt="試合レポートの画面。番号1〜10で各部分を示している">
-  <p class="cap">上が試合全体の評価表、下が選んだ選手の詳細です。番号は下の説明と対応しています。</p>
+</main>
+<div class="overview">
+  <figure>
+    <img src="guide-screenshot.jpg" alt="試合レポートの画面。番号1〜10で各部分を示している">
+    <figcaption class="cap">上が試合全体の評価表、下が選んだ選手の詳細です。</figcaption>
+  </figure>
+  <ol class="legend">
+    <li><span class="num">1</span><div><b>全体の評価表</b>全選手の成績。見出しクリックで並べ替え、行クリックで下に詳細。</div></li>
+    <li><span class="num">2</span><div><b>選手の選択</b>詳細を見る選手を切り替える。</div></li>
+    <li><span class="num">3</span><div><b>成績</b>撃破時刻・キル・与ダメ・被ダメ・サージ・ストームなど。</div></li>
+    <li><span class="num">4</span><div><b>表示する区間</b>全体／バス〜降下／Phase n 待機・収縮 を切り替え。</div></li>
+    <li><span class="num">5</span><div><b>時間スライダー</b>その時刻の位置と、その時点の与ダメ・被ダメ・サージ。</div></li>
+    <li><span class="num">6</span><div><b>マップ</b>移動ルート（待機＝暖色・収縮＝寒色）と安地。<span class="g">●</span>与ダメ <span class="r">●</span>被ダメ <span class="y">★</span>キル ✕倒された地点。</div></li>
+    <li><span class="num">7</span><div><b>拡大・縮小</b>＋／－／全体。拡大中はドラッグで移動。</div></li>
+    <li><span class="num">8</span><div><b>マウスを乗せた表示</b>時刻・相手・ダメージ量・その時点のサージ。</div></li>
+    <li><span class="num">9</span><div><b>出来事</b>撃ち合い・キル・ストームを時刻順に。クリックでその時刻へ。</div></li>
+    <li><span class="num">10</span><div><b>ストームの時間帯</b>入った・出た時刻と受けたダメージ。</div></li>
+  </ol>
+</div>
+<main class="rest">
+  <p class="cap">各部分の詳しい説明は下にあります。</p>
 
   <h2><span class="num">1</span>全体の評価表</h2>
   <p>試合に出た全選手が1行ずつ並んでいます。<b>列の見出しをクリック</b>すると並べ替え（もう一度で逆順）、<b>行をクリック</b>するとその選手の詳細が下に出ます。</p>
