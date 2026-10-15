@@ -57,6 +57,8 @@
                   padding: 2px 8px; cursor: pointer; font-size: 12px; }
   .phases input { margin: 0; }
   .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
+  .opts { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 8px; font-size: 13px; }
+  .opts label { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
   .slider-row { display: flex; align-items: center; gap: 8px; }
   input[type=range] { flex: 1; }
   .readout { font-variant-numeric: tabular-nums; font-size: 13px; }
@@ -109,6 +111,10 @@
         <div>
           <div class="hint">表示する区間</div>
           <div class="phases" id="phases"></div>
+          <div class="opts">
+            <label><input type="checkbox" id="opt-all"> 全員の動線を表示する</label>
+            <label><input type="checkbox" id="opt-near"> 周囲250mの敵も表示する</label>
+          </div>
         </div>
         <div>
           <div class="slider-row"><input type="range" id="slider" min="0" max="1" step="1" value="0"></div>
@@ -277,6 +283,65 @@ function buildPlayer(id) {
 }
 const cumAt = (t) => { let d = 0, k = 0; for (const h of cur.hits) { if (h.t > t) break; d = h.dealt; k = h.taken; } return { dealt: d, taken: k }; };
 const posAt = (t) => { let q = null; for (const pt of cur.path) { if (pt[0] > t) break; q = pt; } return q; };
+
+// ---------- 全員の動線・周囲250mの敵（チェックボックス） ----------
+const NEAR_CM = 25000;   // 250m
+const TRAIL_SEC = 30;    // 周囲の敵の直前の動き
+const pathTimes = {};    // id -> 時刻の配列（二分探索用）
+// 選手 id の t 時点の位置。生きていない（降下前・撃破後）なら null
+function posOf(id, t) {
+  const p = byId.get(id), pts = DATA.paths[id];
+  if (!p || !pts || !pts.length) return null;
+  if (p.death !== null && t > p.death) return null;
+  const ts = pathTimes[id] || (pathTimes[id] = pts.map(q => q[0]));
+  let lo = 0, hi = ts.length - 1, k = -1;
+  while (lo <= hi) { const m = (lo + hi) >> 1; if (ts[m] <= t) { k = m; lo = m + 1; } else hi = m - 1; }
+  return k < 0 ? null : pts[k];
+}
+// 全員のルートは区間ごとに1回だけ作って使い回す（拡大前の座標で作り、描くときに拡大を掛ける）
+let allPathCache = { key: null, owner: null, path: null };
+const basePx = (x, y) => [((x / 100) - EXTENT.left) / (EXTENT.right - EXTENT.left) * W, (EXTENT.top + y / 100) / (EXTENT.top - EXTENT.bottom) * H];
+function allPaths() {
+  const owner = cur ? cur.p.id : null; // 選んでいる選手のルートは色付きで別に描くので除く
+  if (allPathCache.key === segKey && allPathCache.owner === owner) return allPathCache.path;
+  const path = new Path2D();
+  for (const [id, pts] of Object.entries(DATA.paths)) {
+    if (id === owner) continue;
+    let prev = null;
+    for (const q of pts) {
+      if (!inSeg(q[0])) { prev = null; continue; }
+      const [x, y] = basePx(q[1], q[2]);
+      const jump = prev && q[0] - prev[0] > 30 && Math.hypot(q[1] - prev[1], q[2] - prev[2]) > 10000;
+      if (!prev || jump) path.moveTo(x, y); else path.lineTo(x, y);
+      prev = q;
+    }
+  }
+  allPathCache = { key: segKey, owner, path };
+  return path;
+}
+// 名前ラベル: 点の右上→左上→右下→左下の順に、ほかの名前と重ならない場所へ置く。置けなければ出さない（点にマウスで見られる）
+function drawLabels(items) {
+  ctx.font = "bold 12px 'Yu Gothic UI', Meiryo, sans-serif";
+  ctx.textBaseline = "middle";
+  const placed = [];
+  const overlaps = (r) => placed.some(o => r.x < o.x + o.w && o.x < r.x + r.w && r.y < o.y + o.h && o.y < r.y + r.h);
+  items.sort((a, b) => b.prio - a.prio);
+  for (const it of items) {
+    const w = ctx.measureText(it.text).width + 6, h = 16;
+    const cands = [[it.x + 7, it.y - 16], [it.x - 7 - w, it.y - 16], [it.x + 7, it.y + 2], [it.x - 7 - w, it.y + 2]];
+    let spot = null;
+    for (const [x, y] of cands) {
+      const r = { x, y, w, h };
+      if (x < 0 || y < 0 || x + w > W || y + h > H || overlaps(r)) continue;
+      spot = r; break;
+    }
+    if (!spot) continue;
+    placed.push(spot);
+    ctx.lineWidth = 3; ctx.strokeStyle = "rgba(0,0,0,0.85)"; ctx.lineJoin = "round";
+    ctx.strokeText(it.text, spot.x + 3, spot.y + h / 2);
+    ctx.fillStyle = it.color; ctx.fillText(it.text, spot.x + 3, spot.y + h / 2);
+  }
+}
 const inSeg = (t) => segKey === "all" || segAt(t).key === segKey;
 
 function selectPlayer(id, name) {
@@ -418,6 +483,16 @@ function draw() {
     ctx.strokeStyle = color; ctx.lineWidth = w; ctx.setLineDash(dash); ctx.stroke();
   });
   ctx.setLineDash([]);
+  // 全員の動線（細い灰色。自分のルートより下に描く）
+  const optAll = document.getElementById("opt-all").checked;
+  const optNear = document.getElementById("opt-near").checked;
+  if (optAll) {
+    ctx.save();
+    ctx.setTransform(zoom, 0, 0, zoom, panX, panY);
+    ctx.strokeStyle = "rgba(225,230,240,0.30)"; ctx.lineWidth = 1.1 / zoom; ctx.lineJoin = "round";
+    ctx.stroke(allPaths());
+    ctx.restore();
+  }
   // ルート（区間ごとに色分け。30秒以上点が無く100m以上離れた所は点線）
   const pts = cur.path.filter(q => inSeg(q[0]));
   ctx.lineWidth = 2.5; ctx.lineJoin = "round";
@@ -460,12 +535,59 @@ function draw() {
   // スライダーの時刻の位置
   const t = +document.getElementById("slider").value;
   const q = posAt(t);
+  const alive = q && (cur.p.death === null || t <= cur.p.death);
+  const labels = [];
+  // 周囲250mの敵（スライダーの時刻の自分の位置が中心）
+  if (optNear && alive) {
+    const [mx, my] = toPx(q[1], q[2]);
+    ctx.beginPath(); ctx.arc(mx, my, mToPx(NEAR_CM), 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(255,170,80,0.95)"; ctx.lineWidth = 2; ctx.setLineDash([7, 5]); ctx.stroke(); ctx.setLineDash([]);
+    for (const id of Object.keys(DATA.paths)) {
+      if (id === cur.p.id) continue;
+      const e = posOf(id, t);
+      if (!e) continue;
+      const d = Math.hypot(e[1] - q[1], e[2] - q[2]);
+      if (d > NEAR_CM) continue;
+      // 直前30秒の動き
+      const trail = DATA.paths[id].filter(r => r[0] >= t - TRAIL_SEC && r[0] <= t);
+      if (trail.length > 1) {
+        ctx.beginPath();
+        trail.forEach((r, i) => { const [x, y] = toPx(r[1], r[2]); if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y); });
+        ctx.strokeStyle = "rgba(255,160,60,0.85)"; ctx.lineWidth = 2; ctx.stroke();
+      }
+      const [x, y] = toPx(e[1], e[2]);
+      ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fillStyle = "#ff9a3c"; ctx.fill();
+      ctx.strokeStyle = "#000"; ctx.lineWidth = 1.2; ctx.stroke();
+      const name = nameOf(id), dist = Math.round(d / 100);
+      labels.push({ x, y, text: `${name} ${dist}m`, color: "#ffd2a6", prio: 2 });
+      markers.push({ x, y, r: 7, t, lines: [`${name}（${dist}m）`, `${fmt(t)} 時点の位置`] });
+    }
+  }
+  // 全員のスライダー時刻の位置（周囲250mで描いた敵は除く）
+  if (optAll) {
+    for (const id of Object.keys(DATA.paths)) {
+      if (id === cur.p.id) continue;
+      const e = posOf(id, t);
+      if (!e) continue;
+      if (optNear && alive && Math.hypot(e[1] - q[1], e[2] - q[2]) <= NEAR_CM) continue;
+      const [x, y] = toPx(e[1], e[2]);
+      if (x < -10 || y < -10 || x > W + 10 || y > H + 10) continue;
+      ctx.beginPath(); ctx.arc(x, y, 3.2, 0, Math.PI * 2); ctx.fillStyle = "#e8ecf3"; ctx.fill();
+      ctx.strokeStyle = "rgba(0,0,0,0.7)"; ctx.lineWidth = 1; ctx.stroke();
+      labels.push({ x, y, text: nameOf(id), color: "#e8ecf3", prio: 1 });
+      markers.push({ x, y, r: 5, t, lines: [nameOf(id), `${fmt(t)} 時点の位置`] });
+    }
+  }
   if (q) {
     const [x, y] = toPx(q[1], q[2]);
     ctx.beginPath(); ctx.arc(x, y, 9, 0, Math.PI * 2); ctx.strokeStyle = "#fff"; ctx.lineWidth = 3; ctx.stroke();
     ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fillStyle = "#fff"; ctx.fill();
+    if (optAll || optNear) labels.push({ x: x + 4, y, text: cur.p.name, color: "#ffffff", prio: 3 });
   }
+  if (labels.length) drawLabels(labels);
 }
+document.getElementById("opt-all").addEventListener("change", () => draw());
+document.getElementById("opt-near").addEventListener("change", () => draw());
 
 // ホバー表示
 const tip = document.getElementById("tip");
