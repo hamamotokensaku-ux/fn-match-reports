@@ -68,6 +68,8 @@
   .events div { padding: 4px 8px; border-bottom: 1px solid var(--line); cursor: pointer; font-size: 12.5px; }
   .events div:hover { background: var(--row-hover); }
   .events .t { color: var(--muted); font-variant-numeric: tabular-nums; margin-right: 6px; }
+  .events .seg { display: inline-flex; align-items: center; gap: 3px; border: 1px solid var(--line); border-radius: 10px;
+                 padding: 0 6px; margin-right: 6px; font-size: 11px; color: var(--muted); white-space: nowrap; vertical-align: 1px; }
   .nodata { color: var(--muted); padding: 24px; text-align: center; }
 </style>
 </head>
@@ -423,6 +425,14 @@ function renderEvents() {
   rows.filter(r => inSeg(r.t)).sort((a, b) => a.t - b.t).forEach(r => {
     const d = el("div");
     d.appendChild(el("span", { className: "t" }, fmt(r.t)));
+    // どの区間（上のラジオボタン）の出来事かを、同じ名前・同じ色で示す
+    if (Z.length) {
+      const sg = segAt(r.t);
+      const chip = el("span", { className: "seg" });
+      const sw = el("span", { className: "sw" }); sw.style.background = sg.color;
+      chip.appendChild(sw); chip.appendChild(document.createTextNode(sg.label));
+      d.appendChild(chip);
+    }
     d.appendChild(document.createTextNode(r.text));
     d.onclick = () => { const sl = document.getElementById("slider"); sl.value = Math.min(sl.max, Math.max(sl.min, Math.ceil(r.t))); updateReadout(); draw(); };
     box.appendChild(d);
