@@ -7,14 +7,18 @@
 <style>
   :root { --bg: #11151c; --panel: #1a2029; --line: #2c3542; --text: #e6e9ee; --muted: #9aa4b2; --accent: #5aa9ff; }
   body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.6 "Yu Gothic UI", "Meiryo", system-ui, sans-serif; }
-  main { max-width: 760px; margin: 0 auto; padding: 32px 16px; }
+  main { max-width: 960px; margin: 0 auto; padding: 32px 16px 48px; }
   h1 { font-size: 22px; margin: 0 0 4px; }
-  p { color: var(--muted); margin: 0 0 20px; }
+  h2 { font-size: 18px; margin: 32px 0 4px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+  h2 span { color: var(--muted); font-size: 13px; font-weight: normal; margin-left: 10px; }
+  h3 { font-size: 14px; color: var(--muted); margin: 14px 0 6px; }
+  p { color: var(--muted); margin: 0 0 12px; }
   ul { list-style: none; padding: 0; margin: 0; }
-  li a { display: block; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px;
-         margin-bottom: 8px; color: var(--text); text-decoration: none; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; }
+  li a { display: block; height: 100%; box-sizing: border-box; background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+         padding: 10px 12px; color: var(--text); text-decoration: none; font-weight: bold; }
   li a:hover { border-color: var(--accent); }
-  li small { display: block; color: var(--muted); }
+  li small { display: block; color: var(--muted); font-weight: normal; font-size: 12.5px; }
 </style>
 </head>
 <body>
@@ -22,10 +26,37 @@
   <h1>試合レポート一覧</h1>
   <p>大会リプレイから作った試合ごとのレポートです。PC のブラウザで開くのがおすすめです（マップの操作とホバー表示はマウス前提）。</p>
   <p><a href="guide.html" style="color:var(--accent)">→ 初めての方へ：レポートの使い方</a></p>
-  <ul>
-    <!-- 新しい試合はこの下に追加する（新しい順） -->
-    <li><a href="2026-10-11_solo-qualifiers_match06.html">FNCS Solos Qualifiers match06<small>2026-10-11 ・ ソロ ・ 100名</small></a></li>
-  </ul>
+  <!-- 新しい大会はこの下に section を追加する（新しい順） -->
+  <section>
+    <h2>FNCS Solos Fast Track<span>2026-10-11</span></h2>
+    <h3>ASIA</h3>
+    <ul class="grid">
+      <li><a href="2026-10-11_fast-track-asia_match01.html">ASIA match01<small>ソロ ・ 99名 ・ 優勝 alpha seljuny 7</small></a></li>
+      <li><a href="2026-10-11_fast-track-asia_match02.html">ASIA match02<small>ソロ ・ 95名 ・ 優勝 QTD ふーくんǃǃ</small></a></li>
+      <li><a href="2026-10-11_fast-track-asia_match03.html">ASIA match03<small>ソロ ・ 95名 ・ 優勝 ZETA yuma4x</small></a></li>
+      <li><a href="2026-10-11_fast-track-asia_match04.html">ASIA match04<small>ソロ ・ 95名 ・ 優勝 ZETA Minipiyo</small></a></li>
+    </ul>
+    <h3>EU</h3>
+    <ul class="grid">
+      <li><a href="2026-10-11_fast-track-eu_match01.html">EU match01<small>ソロ ・ 98名 ・ 優勝 AUR shxrkÿ</small></a></li>
+      <li><a href="2026-10-11_fast-track-eu_match02.html">EU match02<small>ソロ ・ 98名 ・ 優勝 M8 akiifv</small></a></li>
+      <li><a href="2026-10-11_fast-track-eu_match03.html">EU match03<small>ソロ ・ 91名 ・ 優勝 AUR shxrkÿ</small></a></li>
+      <li><a href="2026-10-11_fast-track-eu_match04.html">EU match04<small>ソロ ・ 98名 ・ 優勝 M8 akiifv</small></a></li>
+    </ul>
+    <h3>NA Central</h3>
+    <ul class="grid">
+      <li><a href="2026-10-11_fast-track-nac_match01.html">NAC match01<small>ソロ ・ 99名 ・ 優勝 MRG Synixǃ</small></a></li>
+      <li><a href="2026-10-11_fast-track-nac_match02.html">NAC match02<small>ソロ ・ 99名 ・ 優勝 falcon pollo 10ǃ</small></a></li>
+      <li><a href="2026-10-11_fast-track-nac_match03.html">NAC match03<small>ソロ ・ 98名 ・ 優勝 scare 7</small></a></li>
+      <li><a href="2026-10-11_fast-track-nac_match04.html">NAC match04<small>ソロ ・ 98名 ・ 優勝 axr purebx c.c.</small></a></li>
+    </ul>
+  </section>
+  <section>
+    <h2>FNCS Solos Qualifiers<span>2026-10-11</span></h2>
+    <ul class="grid">
+      <li><a href="2026-10-11_solo-qualifiers_match06.html">match06<small>ソロ ・ 100名 ・ 優勝 DELTA LBworks</small></a></li>
+    </ul>
+  </section>
 </main>
 </body>
 </html>

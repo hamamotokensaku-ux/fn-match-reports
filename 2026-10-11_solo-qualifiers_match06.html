@@ -139,6 +139,8 @@ const num = (x) => (x === null || x === undefined) ? "-" : (Math.round(x * 10) /
 const signed = (x) => (x === null || x === undefined) ? "-" : (x > 0 ? "+" : "") + num(x);
 const byId = new Map(DATA.players.filter(p => p.id).map(p => [p.id, p]));
 const nameOf = (id) => id ? (byId.get(id) || {}).name || "?" : "撃破者不明（ストーム等）";
+// 死亡の記録が無いままデータが途切れた選手（回線切れ・試合から抜けた等）は撃破者ではなく「途中退出」と出す
+const killerOf = (p) => p.left ? "途中退出（回線切れ等）" : nameOf(p.killedBy);
 const el = (tag, props = {}, text) => { const e = document.createElement(tag); Object.assign(e, props); if (text !== undefined) e.textContent = text; return e; };
 
 // ---------- 区間（フェーズの待機・収縮） ----------
@@ -187,7 +189,7 @@ const COLS = [
   { key: "death", label: "撃破時刻", v: p => p.id ? (p.death === null ? Infinity : p.death) : null, show: p => !p.id ? "-" : p.death === null ? "最後まで生存" : fmt(p.death) },
   { key: "survival", label: "生存時間", v: p => p.survival, show: p => fmt(p.survival) },
   { key: "kills", label: "キル", v: p => p.kills },
-  { key: "killedBy", label: "撃破した相手", v: p => p.id ? (p.death === null ? "" : nameOf(p.killedBy)) : null, cls: "name", text: true },
+  { key: "killedBy", label: "撃破した相手", v: p => p.id ? (p.death === null ? "" : killerOf(p)) : null, cls: "name", text: true },
   { key: "dealt", label: "与ダメ", v: p => p.dealt, show: p => num(p.dealt) },
   { key: "taken", label: "被ダメ", v: p => p.taken, show: p => num(p.taken) },
   { key: "surge", label: "サージ", v: p => p.surge, show: p => signed(p.surge), color: true },
@@ -304,7 +306,7 @@ function renderStats() {
     ["撃破時刻", p.death === null ? "最後まで生存" : fmt(p.death)], ["生存時間", fmt(p.survival)], ["キル", p.kills],
     ["与ダメ", num(p.dealt)], ["被ダメ", num(p.taken)], ["サージ", signed(p.surge)],
     ["ストームダメージ", p.storm === null ? "不明" : num(p.storm)], ["ストーム滞在", p.stormSec + "秒"],
-    ["撃破した相手", p.death === null ? "-" : nameOf(p.killedBy)],
+    ["撃破した相手", p.death === null ? "-" : killerOf(p)],
   ];
   items.forEach(([k, v]) => { const d = el("div", { className: "stat" }); d.appendChild(el("small", {}, k)); d.appendChild(el("b", {}, String(v))); box.appendChild(d); });
 }
@@ -351,7 +353,7 @@ function renderEvents() {
   }
   fights.forEach(f => rows.push({ t: f.t0, text: `${fmt(f.t1) !== fmt(f.t0) ? "〜" + fmt(f.t1) + " " : ""}vs ${nameOf(f.opp)}　与ダメ ${num(f.out)} / 被ダメ ${num(f.in)}` }));
   cur.kills.forEach(k => rows.push({ t: k.t, text: `★ ${nameOf(k.victim)} を撃破` }));
-  if (cur.death) rows.push({ t: cur.death[0], text: `✕ 撃破された（${nameOf(cur.death[1])}）` });
+  if (cur.death) rows.push({ t: cur.death[0], text: cur.p.left ? "✕ 途中退出（これ以降データなし）" : `✕ 撃破された（${nameOf(cur.death[1])}）` });
   cur.storm.forEach(([a, b, d]) => rows.push({ t: a, text: `ストームに入った（${Math.floor(b - a)}秒・ダメージ ${d === null ? "不明" : d}）` }));
   rows.filter(r => inSeg(r.t)).sort((a, b) => a.t - b.t).forEach(r => {
     const d = el("div");
@@ -451,7 +453,9 @@ function draw() {
     ctx.strokeStyle = "#fff"; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.moveTo(x - 8, y - 8); ctx.lineTo(x + 8, y + 8); ctx.moveTo(x + 8, y - 8); ctx.lineTo(x - 8, y + 8); ctx.stroke();
     const c = cumAt(cur.death[0] + 0.5);
-    markers.push({ x, y, r: 10, t: cur.death[0] + 0.5, lines: [`${fmt(cur.death[0])}　✕ 撃破された`, `相手: ${nameOf(cur.death[1])}`, `最終サージ: ${signed(c.dealt - c.taken)}`] });
+    markers.push({ x, y, r: 10, t: cur.death[0] + 0.5, lines: cur.p.left
+      ? [`${fmt(cur.death[0])}　✕ 途中退出（これ以降データなし）`, `最終サージ: ${signed(c.dealt - c.taken)}`]
+      : [`${fmt(cur.death[0])}　✕ 撃破された`, `相手: ${nameOf(cur.death[1])}`, `最終サージ: ${signed(c.dealt - c.taken)}`] });
   }
   // スライダーの時刻の位置
   const t = +document.getElementById("slider").value;
