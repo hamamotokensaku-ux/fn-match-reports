@@ -477,15 +477,19 @@ function draw() {
   const seg = SEGMENTS.find(s => s.key === segKey);
   // 安地の円
   // 区間を選んだときはその円。収縮中は、縮み終わった後にどこへ動くかが分かるよう次の円も点線で描く
+  // 「全体」でもスライダーを動かしたら、その時刻のフェーズの円だけにする（初期値のときだけ全フェーズの円）
+  const sl0 = document.getElementById("slider");
+  const showAllCircles = segKey === "all" && +sl0.value === +sl0.min;
+  const circleSeg = segKey === "all" && !showAllCircles ? segAt(+sl0.value) : seg;
   let circles = [];
-  if (seg && seg.zone) {
-    circles.push([seg.zone, seg.color, 2.5, []]);
-    if (seg.kind === "shrink") {
-      const next = Z.find(z => z.phase === seg.zone.phase + 1);
+  if (circleSeg && circleSeg.zone) {
+    circles.push([circleSeg.zone, circleSeg.color, 2.5, []]);
+    if (circleSeg.kind === "shrink") {
+      const next = Z.find(z => z.phase === circleSeg.zone.phase + 1);
       const nextSeg = next && SEGMENTS.find(s => s.key === `w${next.phase}`);
       if (next) circles.push([next, nextSeg ? nextSeg.color : "#fff", 2, [8, 6]]);
     }
-  } else if (segKey === "all") {
+  } else if (showAllCircles) {
     circles = SEGMENTS.filter(s => s.kind === "wait" && s.from < cur.end).map(s => [s.zone, s.color, 1.2, []]);
   }
   circles.forEach(([z, color, w, dash]) => {
