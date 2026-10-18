@@ -71,6 +71,16 @@
   .events .seg { display: inline-flex; align-items: center; gap: 3px; border: 1px solid var(--line); border-radius: 10px;
                  padding: 0 6px; margin-right: 6px; font-size: 11px; color: var(--muted); white-space: nowrap; vertical-align: 1px; }
   .nodata { color: var(--muted); padding: 24px; text-align: center; }
+  /* サージ・タイムライン */
+  .timeline-box { margin-top: 12px; }
+  #timeline tbody tr { cursor: pointer; }
+  #timeline tr.alert-in td { background: rgba(255,92,92,0.16); border-top: 2px solid var(--take); border-bottom: 2px solid var(--take); }
+  #timeline tr.alert-out td { background: rgba(61,220,132,0.12); border-top: 2px solid var(--deal); border-bottom: 2px solid var(--deal); }
+  #timeline tr.now td { outline: 1px solid var(--accent); }
+  .tl-key { display: inline-block; padding: 0 6px; border-radius: 4px; font-size: 11px; }
+  .tl-key.alert-in { background: rgba(255,92,92,0.2); border: 1px solid var(--take); }
+  .tl-key.alert-out { background: rgba(61,220,132,0.15); border: 1px solid var(--deal); }
+  #surge-table tr.surge td { background: rgba(255,170,80,0.10); }
 </style>
 </head>
 <body>
@@ -83,6 +93,14 @@
     <h2>全体の評価表</h2>
     <p class="hint">列の見出しをクリックすると並べ替え、行をクリックするとその選手の詳細を下に表示します。ダメージはプレイヤー同士のみ（NPC・建築物は含まない）。</p>
     <div class="table-wrap"><table id="overview"><thead></thead><tbody></tbody></table></div>
+  </section>
+
+  <section id="surge-section">
+    <h2>サージ境界値（理論値）</h2>
+    <p class="hint">各フェーズの安地が出た約10秒後に、生存人数がサージ人数を超えていると、サージダメージ（与ダメ − 被ダメ）が低い順に超えた人数分がサージを受けます（5秒ごとに25ダメージ）。
+      境界値は「サージ人数＋1 位の選手のサージダメージ」です。<b>これはデータ観測上の理論値における境界値です。</b>生存人数もリプレイのデータから数えた理論値で、
+      実際にサージを受けた選手との一致はおよそ6割です（境界に近い選手は入れ替わることがあります）。</p>
+    <div class="table-wrap" style="max-height:none"><table id="surge-table"></table></div>
   </section>
 
   <section id="detail-section">
@@ -105,6 +123,10 @@
           <span><i>✕</i> 撃破された地点</span>
           <span><i style="color:#fff">◎</i> スライダーの時刻の位置</span>
           <span>ルート: 待機中＝暖色 / 収縮中＝寒色（フェーズが進むほど濃い）</span>
+        </div>
+        <div class="timeline-box">
+          <div class="hint">タイムライン（10秒ごと。行をクリックでその時刻へ）。<span class="tl-key alert-in">サージ対象</span> <span class="tl-key alert-out">サージ発生・対象外</span> の行はサージ発生のタイミングで、境界値との差（＝サージダメージ − 境界値）を表示します。理論値です。</div>
+          <div class="table-wrap" style="max-height:380px"><table id="timeline"></table></div>
         </div>
       </div>
       <div class="controls">
@@ -170,6 +192,95 @@ const SEGMENTS = [];
   });
 }
 const segAt = (t) => { for (let i = SEGMENTS.length - 1; i >= 0; i--) if (t >= SEGMENTS[i].from) return SEGMENTS[i]; return SEGMENTS[0]; };
+
+// ---------- サージ（理論値） ----------
+// 2026-10-18 に Heat 1/2・Fast Track の HP 記録（5秒ごとの25ダメージ）で確認した前提:
+//  ・順位付けはサージダメージ（与ダメ − 被ダメ）の低い順
+//  ・ゲーム画面の「第N円」= この画面の Phase N+1。その安地が出て約7〜12秒後に発動する
+const TEAM_SIZE = (() => { const c = {}; for (const p of DATA.players) if (p.id) c[p.team] = (c[p.team] || 0) + 1; return Math.max(1, ...Object.values(c)); })();
+function surgeThreshold(phase) {
+  const n = phase - 1; // ゲーム画面の第N円
+  if (n < 1) return null;
+  if (n <= 3) return 90;
+  if (n === 4) return TEAM_SIZE === 2 ? 74 : 75; // デュオだけ74
+  if (n === 5) return 60;
+  if (n === 6) return 50;
+  if (n === 7) return 40;
+  return 30;
+}
+const SURGE_DELAY = 10; // 安地が出てから発動までの秒数（実測 7〜12秒）
+const deathOf = new Map(DATA.players.filter(p => p.id).map(p => [p.id, p.death]));
+const aliveAt = (t) => { let n = 0; for (const d of deathOf.values()) if (d === null || d > t) n++; return n; };
+const DMG_SORTED = DATA.damage.slice().sort((a, b) => a[0] - b[0]);
+function scoresAt(t) {
+  const sc = new Map([...deathOf.keys()].map(id => [id, 0]));
+  for (const d of DMG_SORTED) { if (d[0] > t) break; sc.set(d[1], (sc.get(d[1]) || 0) + d[3]); sc.set(d[2], (sc.get(d[2]) || 0) - d[3]); }
+  return sc;
+}
+// 各フェーズの発動時点の生存人数・対象人数・境界値（サージ人数＋1 位のサージダメージ）
+const ALERTS = Z.map(z => {
+  const th = surgeThreshold(z.phase);
+  const t = z.waitStart + SURGE_DELAY;
+  if (th === null || t > DATA.meta.endT) return null;
+  const sc = scoresAt(t);
+  const alive = [...deathOf.entries()].filter(([, d]) => d === null || d > t).map(([id]) => id).sort((a, b) => sc.get(b) - sc.get(a));
+  const over = alive.length - th;
+  return { phase: z.phase, circle: z.phase - 1, t, alive: alive.length, th, over: Math.max(0, over),
+           boundary: over > 0 ? sc.get(alive[th]) : null, victims: new Set(over > 0 ? alive.slice(th) : []), scores: sc };
+}).filter(Boolean);
+
+function renderSurgeTable() {
+  const tb = document.getElementById("surge-table");
+  tb.innerHTML = "";
+  const head = el("tr");
+  ["フェーズ", "発動の時刻", "生存人数", "サージ人数", "対象人数", "境界値（サージダメージ）"].forEach(h => head.appendChild(el("th", {}, h)));
+  const thead = el("thead"); thead.appendChild(head); tb.appendChild(thead);
+  const body = el("tbody");
+  if (!ALERTS.length) { const r = el("tr"); r.appendChild(el("td", { colSpan: 6, className: "dim" }, "安地のデータが無いため計算できません")); body.appendChild(r); }
+  for (const a of ALERTS) {
+    const r = el("tr", { className: a.over ? "surge" : "" });
+    [`Phase ${a.phase}（第${a.circle}円）`, fmt(a.t), a.alive, a.th, a.over ? `${a.over}人` : "0（発動なし）", a.boundary === null ? "-" : num(a.boundary)]
+      .forEach(v => r.appendChild(el("td", {}, String(v))));
+    body.appendChild(r);
+  }
+  tb.appendChild(body);
+}
+
+// 選手のタイムライン: 10秒ごとの与ダメ・被ダメ・サージと、サージ発動時の境界値との差
+function renderTimeline() {
+  const tb = document.getElementById("timeline");
+  tb.innerHTML = "";
+  if (!cur) return;
+  const head = el("tr");
+  ["時刻", "フェーズ", "生存人数", "与ダメ", "被ダメ", "サージ", "サージ境界値との差"].forEach(h => head.appendChild(el("th", {}, h)));
+  const thead = el("thead"); thead.appendChild(head); tb.appendChild(thead);
+  const end = cur.p.death === null ? DATA.meta.endT : cur.p.death;
+  const rows = [];
+  for (let t = 0; t <= end + 9; t += 10) rows.push({ t: Math.min(t, end) });
+  for (const a of ALERTS) if (a.over && a.t <= end && a.scores.has(cur.p.id) && (cur.p.death === null || cur.p.death > a.t)) rows.push({ t: a.t, alert: a });
+  rows.sort((x, y) => x.t - y.t || (x.alert ? 1 : -1));
+  const body = el("tbody");
+  for (const row of rows) {
+    const t = row.t, c = t < DATA.meta.skipSec ? { dealt: 0, taken: 0 } : cumAt(t);
+    const phase = t < DATA.meta.skipSec ? "待機島" : segAt(t).label;
+    let diff = "", cls = "";
+    if (row.alert) {
+      const a = row.alert, mine = a.scores.get(cur.p.id), hit = a.victims.has(cur.p.id);
+      diff = `${hit ? "サージ対象" : "対象外"}（境界値 ${num(a.boundary)} に対して ${signed(mine - a.boundary)}）`;
+      cls = hit ? "alert-in" : "alert-out";
+    }
+    const r = el("tr", { className: cls });
+    [fmt(t) + (row.alert ? " ⚡" : ""), phase, aliveAt(t), num(c.dealt), num(c.taken), signed(c.dealt - c.taken), diff]
+      .forEach((v, i) => { const td = el("td", { className: i === 1 || i === 6 ? "name" : "" }, String(v)); if (i === 5) td.classList.add(c.dealt - c.taken > 0 ? "pos" : c.dealt - c.taken < 0 ? "neg" : "dim"); r.appendChild(td); });
+    r.onclick = () => {
+      const sl = document.getElementById("slider");
+      if (t < +sl.min || t > +sl.max) setSegment("all");
+      sl.value = Math.min(+sl.max, Math.max(+sl.min, Math.round(t))); updateReadout(); draw();
+    };
+    body.appendChild(r);
+  }
+  tb.appendChild(body);
+}
 
 // ---------- 試合の情報 ----------
 document.title = "試合レポート - " + DATA.meta.replay;
@@ -357,6 +468,7 @@ function selectPlayer(id, name) {
     document.getElementById("stats").innerHTML = "";
     document.getElementById("events").innerHTML = "";
     document.querySelector("#storm tbody").innerHTML = "";
+    document.getElementById("timeline").innerHTML = "";
     document.getElementById("readout").textContent = "この選手はリプレイ内で特定できなかったため、データがありません。";
     draw();
     return;
@@ -364,7 +476,7 @@ function selectPlayer(id, name) {
   cur = buildPlayer(id);
   // 公式の順位が無い試合（古いデータ）は「推定」と明示する
   title.textContent = `選手の詳細：${cur.p.name}（${cur.p.official === false ? "推定" : ""}${cur.p.rank}位）`;
-  renderStats(); renderPhases(); setSegment("all");
+  renderStats(); renderPhases(); setSegment("all"); renderTimeline();
 }
 
 function renderStats() {
@@ -658,6 +770,7 @@ document.getElementById("slider").addEventListener("input", () => { updateReadou
 }
 
 renderOverview();
+renderSurgeTable();
 {
   const first = DATA.players.find(p => p.rank === 1) || DATA.players[0];
   selectPlayer(first.id, first.name);
